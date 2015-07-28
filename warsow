@@ -1,0 +1,19 @@
+#!/bin/sh
+
+path_bin="./versions/current"
+path_cd="./versions/current"
+path_data="./profiles/current"
+
+arch=`uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc/ -e s/sparc64/sparc/ -e s/arm.*/arm/ -e s/sa110/arm/ -e s/alpha/axp/`
+executable="`basename \"warsow\"`.$arch"
+
+if [ ! -e "${path_bin}/$executable" ]; then
+	echo "Error: Executable for system '$arch' not found"
+	exit 1
+fi
+
+exec "${path_bin}/${executable}" \
+	+set fs_basepath "${path_data}" \
+	+set fs_cdpath "${path_cd}" \
+	+set fs_usehomedir "0" \
+	"${@}"
