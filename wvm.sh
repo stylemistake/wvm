@@ -5,8 +5,13 @@ cd `dirname ${0}`
 ##  Constants
 ## -------------------------------------------------------------------------
 
+## Directory for containing various persistent files
 WVM_DIR=".wvm"
-WVM_EXEC_NAME="${0}"
+
+## Mirror list for package downloads
+declare -a WVM_MIRROR_LIST=(
+    "http://s1.smx.lt/wvm"
+)
 
 
 
@@ -14,17 +19,27 @@ WVM_EXEC_NAME="${0}"
 ##  Private functions
 ## -------------------------------------------------------------------------
 
+## A silent version of `cat` in pure bash
+wvm_cat() {
+    local IFS=""
+    (
+        while read line; do
+            echo "${line}"
+        done < ${1}
+    ) 2>/dev/null
+}
+
 wvm_check_init() {
     if ! [[ -d "${WVM_DIR}" ]]; then
-        echo "Error: Warsow version manager was not initialized."
-        echo "Do this so by running: wvm init"
+        echo "Error: Warsow version manager is not initialized."
+        echo "Do this so by running 'wvm init'"
         exit
     fi
 }
 
 wvm_get_current_version() {
     if [[ -d "versions/${1}" ]]; then
-        cat ${WVM_DIR}/version
+        wvm_cat ${WVM_DIR}/version
     fi
 }
 
@@ -35,7 +50,7 @@ wvm_set_current_version() {
 wvm_get_current_profile() {
     local version=`wvm_get_current_version`
     if [[ -d "profiles/${version}/${1}" ]]; then
-        cat ${WVM_DIR}/profile
+        wvm_cat ${WVM_DIR}/profile
     fi
 }
 
@@ -44,18 +59,155 @@ wvm_set_current_profile() {
 }
 
 wvm_get_local_versions() {
-    ls versions
+    pushd versions > /dev/null
+    for server in */; do
+        echo -n "${server:0:-1} "
+    done
+    popd > /dev/null
+    echo
+}
+
+wvm_get_remote_versions() {
+    echo `wvm_cat ${WVM_DIR}/packages.txt | cut -d ' ' -f 1`
+}
+
+wvm_init_server() {
+    local version=`wvm_get_current_version`
+    mkdir -p profiles/${version}/${1}/basewsw
+    cat > profiles/${version}/${1}/basewsw/server.cfg <<EOF
+set sv_ip ""
+set sv_hostname "warsow server"
+set sv_port "44400"
+set password ""
+
+set logconsole_append "1"
+
+set sv_public "1"
+set sv_maxclients "8"
+set sv_skilllevel "1"
+
+set sv_pure "1"
+set sv_uploads "1"
+set sv_autoupdate "0"
+
+set sv_pps "25"
+
+set g_operator_password ""
+set rcon_password ""
+
+set g_autorecord "1"
+set g_autorecord_maxdemos "20"
+set g_uploads_demos "1"
+
+set sv_MOTD "0"
+set sv_MOTDFile "motd.txt"
+
+set g_gametype "duel"
+set g_numbots "0"
+set g_instagib "0"
+set g_instajump "0"
+set g_instashield "0"
+
+set sv_defaultmap "wdm2"
+set g_maplist "" // list of maps in automatic rotation
+set g_maprotation "0"   // 0 = same map, 1 = in order, 2 = random
+EOF
+}
+
+wvm_get_server() {
+    local pid=`wvm_cat ${WVM_DIR}/servers/${1}.pid`
+    if kill -0 ${pid} 2>/dev/null; then
+        echo ${pid}
+    else
+        rm -f ${WVM_DIR}/servers/${1}.pid
+    fi
+}
+
+wvm_save_server() {
+    echo ${2} > ${WVM_DIR}/servers/${1}.pid
+}
+
+wvm_remove_server() {
+    rm -f ${WVM_DIR}/servers/${1}.pid
+}
+
+wvm_list_servers() {
+    pushd ${WVM_DIR}/servers > /dev/null
+    for server in *.pid; do
+        local pid=`cat ${server}`
+        if kill -0 ${pid} 2>/dev/null; then
+            echo "${server%.pid} (${pid})"
+        else
+            rm -f ${server}
+        fi
+    done
+    popd > /dev/null
+}
+
+wvm_string_to_version() {
+    if [[ ${1} =~ ^[0-9]+ ]]; then
+        echo v${1}
+    else
+        echo ${1}
+    fi
 }
 
 wvm_string_to_local_version() {
-    if [[ -d "versions/${1}" ]]; then
-        echo ${1}
-        return
+    local version=`wvm_string_to_version ${1}`
+    if [[ -d "versions/${version}" ]]; then
+        echo ${version}
     fi
-    if [[ -d "versions/v${1}" ]]; then
-        echo v${1}
-        return
-    fi
+}
+
+wvm_string_to_remote_version() {
+    local version=`wvm_string_to_version ${1}`
+    for remote in `wvm_get_remote_versions`; do
+        if [[ ${version} == ${remote} ]]; then
+            echo ${version}
+            return
+        fi
+    done
+}
+
+wvm_resolve_remote_version() {
+    local version=`wvm_string_to_version ${1}`
+    local IFS=$'\n'
+    local -a fields
+    for line in `wvm_cat ${WVM_DIR}/packages.txt`; do
+        IFS=' ' fields=(${line})
+        if [[ ${fields[0]} == ${version} ]]; then
+            if [[ ${fields[1]} == "->" ]]; then
+                echo `wvm_resolve_remote_version ${fields[2]}`
+                return
+            fi
+            if [[ ${fields[1]} == "@" ]]; then
+                echo "${fields[0]}"
+                return
+            fi
+            return 1
+        fi
+    done
+}
+
+wvm_get_remote_version_link() {
+    local version=`wvm_string_to_version ${1}`
+    local IFS=$'\n'
+    local -a fields
+    for line in `wvm_cat ${WVM_DIR}/packages.txt`; do
+        IFS=' ' fields=(${line})
+        if [[ ${fields[0]} == ${version} ]]; then
+            if [[ ${fields[1]} == "@" ]]; then
+                echo "${fields[2]}"
+                return
+            fi
+            return 1
+        fi
+    done
+}
+
+wvm_unpack() {
+    local package=`wvm_get_remote_version_link ${1}`
+    tar -xzf ${WVM_DIR}/${package} -C versions
 }
 
 wvm_update_symlinks() {
@@ -73,23 +225,71 @@ wvm_update_symlinks() {
     fi
 }
 
+
+
+## -------------------------------------------------------------------------
+##  Functions to work with remote
+## -------------------------------------------------------------------------
+
+## Gets data from remote. Shows a progressbar.
+wvm_remote_get() {
+    local args
+    for mirror in "${WVM_MIRROR_LIST[@]}"; do
+        if hash curl 2>/dev/null; then
+            [[ ${1} == "-q" ]] && args="-s" && shift
+            curl -fo - --progress-bar ${args} "${mirror}/${1}" \
+                && return || continue
+        fi
+        if hash wget 2>/dev/null; then
+            [[ ${1} == "-q" ]] && args="-q" && shift
+            wget -O - --progress=bar ${args} "${mirror}/${1}" \
+                && return || continue
+        fi
+        ## If none of these tools exists
+        return 1
+    done
+}
+
+wvm_remote_download_package_list() {
+    wvm_remote_get -q packages.txt > ${WVM_DIR}/packages.txt
+    if [[ ${?} -ne 0 ]]; then
+        echo "Error: Could not download a package list!"
+        return 1
+    fi
+}
+
+wvm_remote_download_package() {
+    local package=`wvm_get_remote_version_link ${1}`
+    wvm_remote_get ${package} > ${WVM_DIR}/${package}
+    if [[ ${?} -ne 0 ]]; then
+        echo "Error: Could not download the package!"
+        return 1
+    fi
+}
+
+
+
+## -------------------------------------------------------------------------
+##  Launchers and stuff
+## -------------------------------------------------------------------------
+
 wvm_launch() {
-    local version=`wvm_get_current_version`
-    local profile=`wvm_get_current_profile`
-    if [[ -z "${version}" ]]; then
+    local version=${1}
+    local profile=${2}
+    if [[ -z ${version} ]]; then
         echo "Error: No version is in use!"
         return 1
     fi
-    if [[ -z "${profile}" ]]; then
-        echo "Error: No profile selected!"
-        return 1
+    if [[ -z ${profile} ]]; then
+        profile="default"
     fi
+    shift 2
+
     local path_bin="./versions/${version}"
     local path_cd="./versions/${version}"
     local path_data="./profiles/${version}/${profile}"
     local arch=`uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc/ -e s/sparc64/sparc/ -e s/arm.*/arm/ -e s/sa110/arm/ -e s/alpha/axp/`
     local executable="`basename \"${1}\"`.${arch}"
-
     shift
 
     if [[ ! -e "${path_bin}/${executable}" ]]; then
@@ -97,7 +297,7 @@ wvm_launch() {
         return 1
     fi
 
-    "${path_bin}/${executable}" \
+    exec "${path_bin}/${executable}" \
         +set fs_basepath "${path_data}" \
         +set fs_cdpath "${path_cd}" \
         +set fs_usehomedir "0" \
@@ -111,7 +311,7 @@ wvm_launch() {
 ## -------------------------------------------------------------------------
 
 wvm_init() {
-    mkdir -p ${WVM_DIR}
+    mkdir -p ${WVM_DIR}/{logs,servers,versions}
     mkdir -p versions
     mkdir -p profiles
     echo > ${WVM_DIR}/profile
@@ -140,6 +340,14 @@ wvm_profile() {
 
 wvm_list() {
     wvm_check_init
+
+    if [[ ${1} == "remote" ]]; then
+        wvm_remote_download_package_list || return
+        echo "Versions available to install:"
+        wvm_get_remote_versions
+        return
+    fi
+
     echo "Installed versions:"
     wvm_get_local_versions
 }
@@ -149,9 +357,48 @@ wvm_current() {
     wvm_get_current_version
 }
 
+wvm_install() {
+    wvm_check_init
+
+    if [[ ${#} -lt 1 ]]; then
+        echo
+        echo "Usage:"
+        echo "    wvm install <version>"
+        echo
+        echo "Example:"
+        echo "    wvm install latest"
+        echo
+        echo "You can get a list of remote versions with 'wvm list remote'"
+        echo
+        exit 2
+    fi
+
+    wvm_remote_download_package_list || return
+
+    local version=`wvm_string_to_version ${1}`
+    local remote_version=`wvm_resolve_remote_version ${1}`
+    if [[ ${?} -ne 0 ]]; then
+        echo "Error: Could not find remote version ${version}"
+        return 1
+    fi
+    
+    wvm_remote_download_package ${remote_version} || return
+    echo "Unpacking..."
+    wvm_unpack ${remote_version} || return
+    echo "Done!"
+}
+
 wvm_use() {
     if [[ ${#} -lt 1 ]]; then
-        echo "Help not implemented yet"
+        echo
+        echo "Usage:"
+        echo "    wvm use <version>"
+        echo
+        echo "Example:"
+        echo "    wvm use v1.6"
+        echo
+        echo "You can get a list of installed versions with 'wvm list'"
+        echo
         exit 2
     fi
     local version=`wvm_string_to_local_version ${1}`
@@ -170,7 +417,90 @@ wvm_run() {
         wvm_use ${1}
         shift
     fi
-    wvm_launch warsow "${@}" || exit
+    local version=`wvm_get_current_version`
+    local profile=`wvm_get_current_profile`
+    wvm_launch ${version} ${profile} warsow "${@}" || exit
+}
+
+wvm_server() {
+    wvm_check_init
+
+    if [[ ${#} -lt 1 ]]; then
+        echo "Help not implemented yet"
+        exit 2
+    fi
+
+    if [[ ${1} == "list" ]]; then
+        echo "Running servers:"
+        wvm_list_servers
+        exit
+    fi
+
+    if [[ ${1} == "init" ]]; then
+        if [[ ${#} -lt 2 ]]; then
+            echo "Usage: wvm server init <server_name>"
+            return 1
+        fi
+        local version=`wvm_get_current_version`
+        wvm_init_server ${2}
+        echo "Server '${2}' was initialized."
+        echo
+        echo "Edit 'profiles/${version}/${2}/basewsw/server.cfg' config to your liking."
+        echo "Then you can start server with:"
+        echo "    wvm server start ${2}"
+        echo
+        exit
+    fi
+
+    local version=`wvm_get_current_version`
+    if [[ -z ${version} ]]; then
+        echo "Error: No version is in use!"
+        exit 1
+    fi
+
+    if [[ ${#} -eq 2 ]]; then
+        local profile=${2}
+        mkdir -p profiles/${version}/${profile}
+    else
+        local profile=`wvm_get_current_profile`
+        if [[ -z ${profile} ]]; then
+            echo "Error: No profile selected!"
+            exit 1
+        fi
+    fi
+
+    if [[ ${1} == "start" ]]; then
+        local pid=`wvm_get_server ${profile}`
+        if [[ -n ${pid} ]]; then
+            echo "Already running! (${pid})"
+            exit
+        fi
+        wvm_launch ${version} ${profile} wsw_server \
+            +exec server.cfg "${@}" \
+            2>&1 >${WVM_DIR}/logs/warsow.log <&- \
+            & local pid=${!}
+        disown ${pid}
+        wvm_save_server ${profile} ${pid}
+        echo "Running: '${profile}', pid ${pid}"
+        exit
+    fi
+
+    if [[ ${1} == "stop" ]]; then
+        local pid=`wvm_get_server ${profile}`
+        if [[ -z ${pid} ]]; then
+            echo "Not running!"
+        else
+            echo "Stopping server '${profile}' (${pid})..."
+            kill ${pid}
+            sleep 1
+            if [[ -z `wvm_get_server ${profile}` ]]; then
+                echo "OK!"
+            else
+                echo "Can't stop server. Try stopping manually (kill -9 ${pid})."
+            fi
+        fi
+        exit
+    fi
 }
 
 
@@ -182,31 +512,31 @@ wvm_help() {
     echo "    wvm help          Show this help message"
     echo "    wvm init          Initialize this folder to use with wvm"
     echo "    wvm list          List installed versions"
-    # echo "    wvm list remote   List remote versions available to install"
-    # echo "    wvm install       Download and install a version of Warsow"
+    echo "    wvm list remote   List remote versions available to install"
+    echo "    wvm install       Download and install a version of Warsow"
     # echo "    wvm uninstall     Uninstall a version of Warsow"
     echo "    wvm current       Show current version of Warsow"
     echo "    wvm use           Set current version of Warsow"
-    # echo "    wvm run           Run a version of Warsow"
+    echo "    wvm run           Run a version of Warsow"
     echo "    wvm profile       Show profiles or switch a profile"
-    # echo "    wvm server        Start/stop a Warsow server"
+    echo "    wvm server        Start/stop a Warsow server"
     # echo "    wvm tv            Start/stop a Warsow TV server"
     echo
     echo "Example:"
-    # echo "    wvm install v1.6"
-    echo "    wvm use 1.6"
+    echo "    wvm install v1.5"
+    echo "    wvm use 1.5"
     echo "    wvm profile sm"
     echo "    ./warsow"
-    # echo
-    # echo "Server example:"
-    # echo "    wvm install v1.6"
-    # echo "    wvm use 1.6"
-    # echo "    wvm profile server-duel-1"
-    # echo "    wvm profile server-duel-2"
-    # echo "    (edit server configs for each profile)"
-    # echo "    wvm server start server-duel-1"
-    # echo "    wvm server start server-duel-2"
-    # echo "    wvm server list"
+    echo
+    echo "Server example:"
+    echo "    wvm install v1.5"
+    echo "    wvm use 1.5"
+    echo "    wvm server init server-duel1"
+    echo "    wvm server init server-duel2"
+    echo "    (edit server configs (server.cfg) for each profile)"
+    echo "    wvm server start server-duel1"
+    echo "    wvm server start server-duel2"
+    echo "    wvm server list"
     echo
 }
 
@@ -250,6 +580,16 @@ wvm() {
         "use" )
             shift 1
             wvm_use "${@}"
+            exit
+        ;;
+        "install" )
+            shift 1
+            wvm_install "${@}"
+            exit
+        ;;
+        "server" )
+            shift 1
+            wvm_server "${@}"
             exit
         ;;
         "run" )
