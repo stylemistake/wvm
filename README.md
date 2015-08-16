@@ -5,6 +5,40 @@ to play any version of the game at any time or to run multiple isolated servers
 with different configs!
 
 
+## Installation
+
+Using `wget`:
+
+```
+mkdir warsow
+cd warsow
+wget -O wvm.sh https://raw.githubusercontent.com/stylemistake/warsow-vm/master/wvm.sh
+bash wvm.sh init
+```
+
+Using `curl`:
+
+```
+mkdir warsow
+cd warsow
+curl -o wvm.sh https://raw.githubusercontent.com/stylemistake/warsow-vm/master/wvm.sh
+bash wvm.sh init
+```
+
+If you install `wvm` this way, you run commands like this:
+
+```
+bash wvm.sh list remote
+```
+
+You may install it globally and add to your `PATH` environment variable, so you
+can launch it from anywhere like this:
+
+```
+wvm list remote
+```
+
+
 ## Usage
 
 ```
