@@ -73,6 +73,37 @@ wvm_update_symlinks() {
     fi
 }
 
+wvm_launch() {
+    local version=`wvm_get_current_version`
+    local profile=`wvm_get_current_profile`
+    if [ -z "${version}" ]; then
+        echo "Error: No version is in use!"
+        return 1
+    fi
+    if [ -z "${profile}" ]; then
+        echo "Error: No profile selected!"
+        return 1
+    fi
+    local path_bin="./versions/${version}"
+    local path_cd="./versions/${version}"
+    local path_data="./profiles/${version}/${profile}"
+    local arch=`uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc/ -e s/sparc64/sparc/ -e s/arm.*/arm/ -e s/sa110/arm/ -e s/alpha/axp/`
+    local executable="`basename \"${1}\"`.$arch"
+
+    shift
+
+    if [ ! -e "${path_bin}/$executable" ]; then
+        echo "Error: Executable for system '$arch' not found"
+        return 1
+    fi
+
+    "${path_bin}/${executable}" \
+        +set fs_basepath "${path_data}" \
+        +set fs_cdpath "${path_cd}" \
+        +set fs_usehomedir "0" \
+        ${@}
+}
+
 
 
 ## -------------------------------------------------------------------------
@@ -132,6 +163,16 @@ wvm_use() {
     wvm_update_symlinks
     echo "Using version: ${version}"
 }
+
+wvm_run() {
+    wvm_check_init
+    if [ -n "${1}" ]; then
+        wvm_use ${1}
+        shift
+    fi
+    wvm_launch warsow ${@} || exit
+}
+
 
 wvm_help() {
     echo
@@ -209,6 +250,11 @@ wvm() {
         "use" )
             shift 1
             wvm_use ${@}
+            exit ${?}
+        ;;
+        "run" )
+            shift 1
+            wvm_run ${@}
             exit ${?}
         ;;
         * )
