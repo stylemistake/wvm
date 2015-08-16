@@ -15,7 +15,7 @@ WVM_EXEC_NAME="${0}"
 ## -------------------------------------------------------------------------
 
 wvm_check_init() {
-    if ! [ -d "${WVM_DIR}" ]; then
+    if ! [[ -d "${WVM_DIR}" ]]; then
         echo "Error: Warsow version manager was not initialized."
         echo "Do this so by running: wvm init"
         exit
@@ -23,7 +23,7 @@ wvm_check_init() {
 }
 
 wvm_get_current_version() {
-    if [ -d "versions/${1}" ]; then
+    if [[ -d "versions/${1}" ]]; then
         cat ${WVM_DIR}/version
     fi
 }
@@ -34,7 +34,7 @@ wvm_set_current_version() {
 
 wvm_get_current_profile() {
     local version=`wvm_get_current_version`
-    if [ -d "profiles/${version}/${1}" ]; then
+    if [[ -d "profiles/${version}/${1}" ]]; then
         cat ${WVM_DIR}/profile
     fi
 }
@@ -48,11 +48,11 @@ wvm_get_local_versions() {
 }
 
 wvm_string_to_local_version() {
-    if [ -d "versions/${1}" ]; then
+    if [[ -d "versions/${1}" ]]; then
         echo ${1}
         return
     fi
-    if [ -d "versions/v${1}" ]; then
+    if [[ -d "versions/v${1}" ]]; then
         echo v${1}
         return
     fi
@@ -64,11 +64,11 @@ wvm_update_symlinks() {
     rm -f versions/current
     local profile=`wvm_get_current_profile`
     local version=`wvm_get_current_version`
-    if [ -n "${profile}" ] && [ -d "profiles/${version}/${profile}" ]; then
+    if [[ -n "${profile}" ]] && [[ -d "profiles/${version}/${profile}" ]]; then
         ln -s ${version}/${profile} profiles/current
         ln -s profiles/current current
     fi
-    if [ -n "${version}" ] && [ -d "versions/${version}" ]; then
+    if [[ -n "${version}" ]] && [[ -d "versions/${version}" ]]; then
         ln -s ${version} versions/current
     fi
 }
@@ -76,11 +76,11 @@ wvm_update_symlinks() {
 wvm_launch() {
     local version=`wvm_get_current_version`
     local profile=`wvm_get_current_profile`
-    if [ -z "${version}" ]; then
+    if [[ -z "${version}" ]]; then
         echo "Error: No version is in use!"
         return 1
     fi
-    if [ -z "${profile}" ]; then
+    if [[ -z "${profile}" ]]; then
         echo "Error: No profile selected!"
         return 1
     fi
@@ -88,12 +88,12 @@ wvm_launch() {
     local path_cd="./versions/${version}"
     local path_data="./profiles/${version}/${profile}"
     local arch=`uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc/ -e s/sparc64/sparc/ -e s/arm.*/arm/ -e s/sa110/arm/ -e s/alpha/axp/`
-    local executable="`basename \"${1}\"`.$arch"
+    local executable="`basename \"${1}\"`.${arch}"
 
     shift
 
-    if [ ! -e "${path_bin}/$executable" ]; then
-        echo "Error: Executable for system '$arch' not found"
+    if [[ ! -e "${path_bin}/${executable}" ]]; then
+        echo "Error: Executable for system '${arch}' not found"
         return 1
     fi
 
@@ -101,7 +101,7 @@ wvm_launch() {
         +set fs_basepath "${path_data}" \
         +set fs_cdpath "${path_cd}" \
         +set fs_usehomedir "0" \
-        ${@}
+        "${@}"
 }
 
 
@@ -121,13 +121,13 @@ wvm_init() {
 
 wvm_profile() {
     wvm_check_init
-    if [ ${#} -lt 1 ]; then
+    if [[ ${#} -lt 1 ]]; then
         echo -n "Current profile: "
         wvm_get_current_profile
     else
         local profile="${1}"
         local version=`wvm_get_current_version`
-        if [ "${version}" = "" ]; then
+        if [[ -z ${version} ]]; then
             echo "Can't create profile - no version is in use!"
             return 1
         fi
@@ -150,12 +150,12 @@ wvm_current() {
 }
 
 wvm_use() {
-    if [ ${#} -lt 1 ]; then
+    if [[ ${#} -lt 1 ]]; then
         echo "Help not implemented yet"
         exit 2
     fi
     local version=`wvm_string_to_local_version ${1}`
-    if [ -z "${version}" ]; then
+    if [[ -z ${version} ]]; then
         echo "Version ${version} was not found"
         exit 1
     fi
@@ -166,11 +166,11 @@ wvm_use() {
 
 wvm_run() {
     wvm_check_init
-    if [ -n "${1}" ]; then
+    if [[ -n ${1} ]]; then
         wvm_use ${1}
         shift
     fi
-    wvm_launch warsow ${@} || exit
+    wvm_launch warsow "${@}" || exit
 }
 
 
@@ -217,7 +217,7 @@ wvm_help() {
 ## -------------------------------------------------------------------------
 
 wvm() {
-    if [ ${#} -lt 1 ]; then
+    if [[ ${#} -lt 1 ]]; then
         wvm help
         return
     fi
@@ -229,33 +229,33 @@ wvm() {
         ;;
         "init" )
             shift 1
-            wvm_init ${@}
+            wvm_init "${@}"
             exit
         ;;
         "profile" )
             shift 1
-            wvm_profile ${@}
-            exit ${?}
+            wvm_profile "${@}"
+            exit
         ;;
         "current" )
             shift 1
-            wvm_current ${@}
-            exit ${?}
+            wvm_current "${@}"
+            exit
         ;;
         "list" )
             shift 1
-            wvm_list ${@}
+            wvm_list "${@}"
             exit
         ;;
         "use" )
             shift 1
-            wvm_use ${@}
-            exit ${?}
+            wvm_use "${@}"
+            exit
         ;;
         "run" )
             shift 1
-            wvm_run ${@}
-            exit ${?}
+            wvm_run "${@}"
+            exit
         ;;
         * )
             wvm_help
@@ -270,4 +270,4 @@ wvm() {
 ##  Bootstrapping
 ## -------------------------------------------------------------------------
 
-wvm ${@}
+wvm "${@}"
