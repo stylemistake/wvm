@@ -386,7 +386,7 @@ wvm_install() {
     echo "Unpacking..."
     wvm_unpack ${remote_version} || return
     echo "Done!"
-    echo "Installed version: ${remote_version}"
+    wvm_use ${remote_version}
 }
 
 wvm_use() {
