@@ -386,6 +386,7 @@ wvm_install() {
     echo "Unpacking..."
     wvm_unpack ${remote_version} || return
     echo "Done!"
+    echo "Installed version: ${remote_version}"
 }
 
 wvm_use() {
@@ -403,7 +404,7 @@ wvm_use() {
     fi
     local version=`wvm_string_to_local_version ${1}`
     if [[ -z ${version} ]]; then
-        echo "Version ${version} was not found"
+        echo "Error: Version '${1}' was not found!"
         exit 1
     fi
     wvm_set_current_version ${version}
