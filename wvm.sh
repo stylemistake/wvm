@@ -33,7 +33,7 @@ wvm_check_init() {
     if ! [[ -d "${WVM_DIR}" ]]; then
         echo "Error: Warsow version manager is not initialized."
         echo "Do this so by running 'wvm init'"
-        exit
+        return
     fi
 }
 
@@ -320,7 +320,7 @@ wvm_init() {
 }
 
 wvm_profile() {
-    wvm_check_init
+    wvm_check_init || return
     if [[ ${#} -lt 1 ]]; then
         echo -n "Current profile: "
         wvm_get_current_profile
@@ -339,7 +339,7 @@ wvm_profile() {
 }
 
 wvm_list() {
-    wvm_check_init
+    wvm_check_init || return
 
     if [[ ${1} == "remote" ]]; then
         wvm_remote_download_package_list || return
@@ -358,7 +358,7 @@ wvm_current() {
 }
 
 wvm_install() {
-    wvm_check_init
+    wvm_check_init || return
 
     if [[ ${#} -lt 1 ]]; then
         echo
@@ -370,7 +370,7 @@ wvm_install() {
         echo
         echo "You can get a list of remote versions with 'wvm list remote'"
         echo
-        exit 2
+        return 2
     fi
 
     wvm_remote_download_package_list || return
@@ -400,12 +400,12 @@ wvm_use() {
         echo
         echo "You can get a list of installed versions with 'wvm list'"
         echo
-        exit 2
+        return 2
     fi
     local version=`wvm_string_to_local_version ${1}`
     if [[ -z ${version} ]]; then
         echo "Error: Version '${1}' was not found!"
-        exit 1
+        return 1
     fi
     wvm_set_current_version ${version}
     wvm_update_symlinks
@@ -413,28 +413,28 @@ wvm_use() {
 }
 
 wvm_run() {
-    wvm_check_init
+    wvm_check_init || return
     if [[ -n ${1} ]]; then
         wvm_use ${1}
         shift
     fi
     local version=`wvm_get_current_version`
     local profile=`wvm_get_current_profile`
-    wvm_launch ${version} ${profile} warsow "${@}" || exit
+    wvm_launch ${version} ${profile} warsow "${@}" || return
 }
 
 wvm_server() {
-    wvm_check_init
+    wvm_check_init || return
 
     if [[ ${#} -lt 1 ]]; then
         echo "Help not implemented yet"
-        exit 2
+        return 2
     fi
 
     if [[ ${1} == "list" ]]; then
         echo "Running servers:"
         wvm_list_servers
-        exit
+        return
     fi
 
     if [[ ${1} == "init" ]]; then
@@ -450,13 +450,13 @@ wvm_server() {
         echo "Then you can start server with:"
         echo "    wvm server start ${2}"
         echo
-        exit
+        return
     fi
 
     local version=`wvm_get_current_version`
     if [[ -z ${version} ]]; then
         echo "Error: No version is in use!"
-        exit 1
+        return 1
     fi
 
     if [[ ${#} -eq 2 ]]; then
@@ -466,7 +466,7 @@ wvm_server() {
         local profile=`wvm_get_current_profile`
         if [[ -z ${profile} ]]; then
             echo "Error: No profile selected!"
-            exit 1
+            return 1
         fi
     fi
 
@@ -474,7 +474,7 @@ wvm_server() {
         local pid=`wvm_get_server ${profile}`
         if [[ -n ${pid} ]]; then
             echo "Already running! (${pid})"
-            exit
+            return
         fi
         wvm_launch ${version} ${profile} wsw_server \
             +exec server.cfg "${@}" \
@@ -483,7 +483,7 @@ wvm_server() {
         disown ${pid}
         wvm_save_server ${profile} ${pid}
         echo "Running: '${profile}', pid ${pid}"
-        exit
+        return
     fi
 
     if [[ ${1} == "stop" ]]; then
@@ -500,7 +500,7 @@ wvm_server() {
                 echo "Can't stop server. Try stopping manually (kill -9 ${pid})."
             fi
         fi
-        exit
+        return
     fi
 }
 
@@ -556,51 +556,51 @@ wvm() {
     case ${1} in
         "help" )
             wvm_help
-            exit 127
+            return 127
         ;;
         "init" )
             shift 1
             wvm_init "${@}"
-            exit
+            return
         ;;
         "profile" )
             shift 1
             wvm_profile "${@}"
-            exit
+            return
         ;;
         "current" )
             shift 1
             wvm_current "${@}"
-            exit
+            return
         ;;
         "list" )
             shift 1
             wvm_list "${@}"
-            exit
+            return
         ;;
         "use" )
             shift 1
             wvm_use "${@}"
-            exit
+            return
         ;;
         "install" )
             shift 1
             wvm_install "${@}"
-            exit
+            return
         ;;
         "server" )
             shift 1
             wvm_server "${@}"
-            exit
+            return
         ;;
         "run" )
             shift 1
             wvm_run "${@}"
-            exit
+            return
         ;;
         * )
             wvm_help
-            exit 127
+            return 127
         ;;
     esac
 }
@@ -611,4 +611,4 @@ wvm() {
 ##  Bootstrapping
 ## -------------------------------------------------------------------------
 
-wvm "${@}"
+[[ "${BASH_SOURCE[0]}" == "${0}" ]] && wvm "${@}"

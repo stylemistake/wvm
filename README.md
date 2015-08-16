@@ -25,16 +25,16 @@ curl -o wvm.sh https://raw.githubusercontent.com/stylemistake/warsow-vm/master/w
 bash wvm.sh init
 ```
 
-If you install `wvm` this way, you run commands like this:
+Then you run commands like this:
 
 ```
 bash wvm.sh list remote
 ```
 
-You may install it globally and add to your `PATH` environment variable, so you
-can launch it from anywhere like this:
+You can load it up into your session and use it from anywhere:
 
 ```
+source wvm.sh
 wvm list remote
 ```
 
