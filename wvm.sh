@@ -29,6 +29,10 @@ wvm_cat() {
     ) 2>/dev/null
 }
 
+wvm_is_sourced() {
+    [[ "${FUNCNAME[1]}" == source ]]
+}
+
 wvm_check_init() {
     if ! [[ -d "${WVM_DIR}" ]]; then
         echo "Error: Warsow version manager is not initialized."
@@ -611,4 +615,4 @@ wvm() {
 ##  Bootstrapping
 ## -------------------------------------------------------------------------
 
-[[ "${BASH_SOURCE[0]}" == "${0}" ]] && wvm "${@}"
+wvm_is_sourced || wvm "${@}"
