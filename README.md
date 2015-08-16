@@ -10,33 +10,28 @@ with different configs!
 Using `wget`:
 
 ```
-mkdir warsow
-cd warsow
 wget -O wvm.sh https://raw.githubusercontent.com/stylemistake/warsow-vm/master/wvm.sh
-bash wvm.sh init
+source wvm.sh
 ```
 
 Using `curl`:
 
 ```
+curl -o wvm.sh https://raw.githubusercontent.com/stylemistake/warsow-vm/master/wvm.sh
+source wvm.sh
+```
+
+Then create a directory, where all your warsow installations will be contained
+in, and initialize `wvm`:
+
+```
 mkdir warsow
 cd warsow
-curl -o wvm.sh https://raw.githubusercontent.com/stylemistake/warsow-vm/master/wvm.sh
-bash wvm.sh init
+wvm init
 ```
 
-Then you run commands like this:
-
-```
-bash wvm.sh list remote
-```
-
-You can load it up into your session and use it from anywhere:
-
-```
-source wvm.sh
-wvm list remote
-```
+You can add the line `source <path_to>/wvm.sh` to your `~/.bash_profile`, so
+it injects `wvm` into your bash session every time you open the console!
 
 
 ## Usage
@@ -58,23 +53,18 @@ Usage:
 
 Example:
     wvm init
-    wvm install v1.5.1
-    wvm use v1.5.1
+    wvm install latest
     wvm profile sm
     ./warsow
 
 Server example:
     wvm init
-    wvm install v1.5.1
-    wvm use v1.5.1
-    wvm server init server-duel1
-    wvm server init server-duel2
-    (edit server configs for each profile)
-    wvm server start server-duel1
-    wvm server start server-duel2
+    wvm install latest
+    wvm server init server-duel
+    (edit server config...)
+    wvm server start server-duel
     wvm server list
-    wvm server stop server-duel1
-    wvm server stop server-duel2
+    wvm server stop server-duel
 ```
 
 
