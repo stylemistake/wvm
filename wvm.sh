@@ -1,5 +1,4 @@
 #!/bin/bash
-cd `dirname ${0}`
 
 ## -------------------------------------------------------------------------
 ##  Constants
@@ -37,7 +36,7 @@ wvm_check_init() {
     if ! [[ -d "${WVM_DIR}" ]]; then
         echo "Error: Warsow version manager is not initialized."
         echo "Do this so by running 'wvm init'"
-        return
+        return 2
     fi
 }
 
@@ -543,6 +542,7 @@ wvm_help() {
     echo "    wvm server start server-duel2"
     echo "    wvm server list"
     echo
+    return 127
 }
 
 
@@ -557,55 +557,20 @@ wvm() {
         return
     fi
 
-    case ${1} in
-        "help" )
-            wvm_help
-            return 127
-        ;;
-        "init" )
-            shift 1
-            wvm_init "${@}"
-            return
-        ;;
-        "profile" )
-            shift 1
-            wvm_profile "${@}"
-            return
-        ;;
-        "current" )
-            shift 1
-            wvm_current "${@}"
-            return
-        ;;
-        "list" )
-            shift 1
-            wvm_list "${@}"
-            return
-        ;;
-        "use" )
-            shift 1
-            wvm_use "${@}"
-            return
-        ;;
-        "install" )
-            shift 1
-            wvm_install "${@}"
-            return
-        ;;
-        "server" )
-            shift 1
-            wvm_server "${@}"
-            return
-        ;;
-        "run" )
-            shift 1
-            wvm_run "${@}"
-            return
-        ;;
-        * )
-            wvm_help
-            return 127
-        ;;
+    local action=${1}
+    shift
+
+    case ${action} in
+        help)       wvm_help ;;
+        init)       wvm_init "${@}" ;;
+        profile)    wvm_profile "${@}" ;;
+        current)    wvm_current "${@}" ;;
+        list)       wvm_list "${@}" ;;
+        use)        wvm_use "${@}" ;;
+        install)    wvm_install "${@}" ;;
+        server)     wvm_server "${@}" ;;
+        run)        wvm_run "${@}" ;;
+        *)          wvm_help ;;
     esac
 }
 
@@ -615,4 +580,8 @@ wvm() {
 ##  Bootstrapping
 ## -------------------------------------------------------------------------
 
-wvm_is_sourced || wvm "${@}"
+if ! wvm_is_sourced; then
+    cd `dirname ${0}`
+    wvm "${@}"
+    exit ${?}
+fi
