@@ -52,19 +52,16 @@ Usage:
     wvm server        Start/stop a Warsow server
 
 Example:
-    wvm init
     wvm install latest
-    wvm profile sm
+    wvm profile foo
     ./warsow
 
 Server example:
-    wvm init
     wvm install latest
-    wvm server init server-duel
-    (edit server config...)
-    wvm server start server-duel
+    wvm server init foo (then edit server.cfg)
+    wvm server start foo
     wvm server list
-    wvm server stop server-duel
+    wvm server stop foo
 ```
 
 

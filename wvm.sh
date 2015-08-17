@@ -10,6 +10,7 @@ WVM_DIR=".wvm"
 ## Mirror list for package downloads
 declare -a WVM_MIRROR_LIST=(
     "http://s1.smx.lt/wvm"
+    "http://e1.smx.lt/wvm"
 )
 
 
@@ -67,7 +68,6 @@ wvm_get_local_versions() {
         echo "${server:0:-1}"
     done
     popd > /dev/null
-    echo
 }
 
 wvm_get_remote_versions() {
@@ -527,20 +527,16 @@ wvm_help() {
     # echo "    wvm tv            Start/stop a Warsow TV server"
     echo
     echo "Example:"
-    echo "    wvm install v1.5"
-    echo "    wvm use 1.5"
-    echo "    wvm profile sm"
+    echo "    wvm install latest"
+    echo "    wvm profile foo"
     echo "    ./warsow"
     echo
     echo "Server example:"
-    echo "    wvm install v1.5"
-    echo "    wvm use 1.5"
-    echo "    wvm server init server-duel1"
-    echo "    wvm server init server-duel2"
-    echo "    (edit server configs (server.cfg) for each profile)"
-    echo "    wvm server start server-duel1"
-    echo "    wvm server start server-duel2"
+    echo "    wvm install latest"
+    echo "    wvm server init foo (then edit server.cfg)"
+    echo "    wvm server start foo"
     echo "    wvm server list"
+    echo "    wvm server stop foo"
     echo
     return 127
 }
