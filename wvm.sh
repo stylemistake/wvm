@@ -64,14 +64,14 @@ wvm_set_current_profile() {
 wvm_get_local_versions() {
     pushd versions > /dev/null
     for server in */; do
-        echo -n "${server:0:-1} "
+        echo "${server:0:-1}"
     done
     popd > /dev/null
     echo
 }
 
 wvm_get_remote_versions() {
-    echo `wvm_cat ${WVM_DIR}/packages.txt | cut -d ' ' -f 1`
+    wvm_cat ${WVM_DIR}/packages.txt | cut -d ' ' -f 1 | sort
 }
 
 wvm_init_server() {
