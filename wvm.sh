@@ -366,6 +366,7 @@ wvm_install() {
         echo "    wvm install <version>"
         echo
         echo "Example:"
+        echo "    wvm install v2.0"
         echo "    wvm install latest"
         echo
         echo "You can get a list of remote versions with 'wvm list remote'"
@@ -390,6 +391,7 @@ wvm_install() {
 }
 
 wvm_use() {
+    wvm_check_init || return
     if [[ ${#} -lt 1 ]]; then
         echo
         echo "Usage:"
@@ -397,6 +399,7 @@ wvm_use() {
         echo
         echo "Example:"
         echo "    wvm use v1.6"
+        echo "    wvm use latest"
         echo
         echo "You can get a list of installed versions with 'wvm list'"
         echo
@@ -404,9 +407,14 @@ wvm_use() {
     fi
     local version=`wvm_string_to_local_version ${1}`
     if [[ -z ${version} ]]; then
-        echo "Error: Version '${1}' was not found!"
-        return 1
+        wvm_remote_download_package_list || return
+        version=`wvm_resolve_remote_version ${1}`
+        if [[ ${?} -ne 0 || -z ${version} ]]; then
+            echo "Error: Version '${1}' was not found!"
+            return 1
+        fi
     fi
+
     wvm_set_current_version ${version}
     wvm_update_symlinks
     echo "Using version: ${version}"
@@ -446,7 +454,7 @@ wvm_server() {
         wvm_init_server ${2}
         echo "Server '${2}' was initialized."
         echo
-        echo "Edit 'profiles/${version}/${2}/basewsw/server.cfg' config to your liking."
+        echo "Edit 'profiles/${2}/basewsw/server.cfg' config to your liking."
         echo "Then you can start server with:"
         echo "    wvm server start ${2}"
         echo
@@ -554,6 +562,7 @@ wvm() {
     shift
 
     case ${action} in
+        ## ----- Main commands -----
         help)       wvm_help ;;
         init)       wvm_init "${@}" ;;
         profile)    wvm_profile "${@}" ;;
@@ -563,6 +572,16 @@ wvm() {
         install)    wvm_install "${@}" ;;
         server)     wvm_server "${@}" ;;
         run)        wvm_run "${@}" ;;
+        ## ----- Aliases -----
+        ## for 'wvm_list'
+        ls)         wvm_list "${@}" ;;
+        ls-remote)  wvm_list remote "${@}" ;;
+        ## for 'wvm_server'
+        start)      wvm_server start "${@}" ;;
+        stop)       wvm_server stop "${@}" ;;
+        status)     [[ -z ${2} ]] && wvm_server list \
+                    || wvm_server status "${@}" ;;
+        ## ----- Catch all -----
         *)          wvm_help ;;
     esac
 }
