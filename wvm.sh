@@ -435,7 +435,17 @@ wvm_server() {
     wvm_check_init || return
 
     if [[ ${#} -lt 1 ]]; then
-        echo "Help not implemented yet"
+        echo "Usage:"
+        echo "    wvm server init               Create a new server profile"
+        echo "    wvm server list               List running servers"
+        echo "    wvm server start <profile>    Start the server"
+        echo "    wvm server stop <profile>     Stop the server"
+        echo "    wvm server status <profile>   Check server status"
+        echo
+        echo "Aliases:"
+        echo "    wvm start <profile>           Same as wvm server start"
+        echo "    wvm stop <profile>            Same as wvm server stop"
+        echo "    wvm status [profile]          Same as wvm server list/status"
         return 2
     fi
 
