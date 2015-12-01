@@ -10,7 +10,6 @@ WVM_DIR=".wvm"
 ## Mirror list for package downloads
 declare -a WVM_MIRROR_LIST=(
     "http://s1.smx.lt/wvm"
-    "http://e1.smx.lt/wvm"
 )
 
 
@@ -53,7 +52,7 @@ wvm_set_current_version() {
 
 wvm_get_current_profile() {
     local version=`wvm_get_current_version`
-    if [[ -d "profiles/${version}/${1}" ]]; then
+    if [[ -d "profiles/${1}" ]]; then
         wvm_cat ${WVM_DIR}/profile
     fi
 }
@@ -76,8 +75,8 @@ wvm_get_remote_versions() {
 
 wvm_init_server() {
     local version=`wvm_get_current_version`
-    mkdir -p profiles/${version}/${1}/basewsw
-    cat > profiles/${version}/${1}/basewsw/server.cfg <<EOF
+    mkdir -p profiles/${1}/basewsw
+    cat > profiles/${1}/basewsw/server.cfg <<EOF
 set sv_ip ""
 set sv_hostname "warsow server"
 set sv_port "44400"
@@ -214,14 +213,12 @@ wvm_unpack() {
 }
 
 wvm_update_symlinks() {
-    rm -f current
     rm -f profiles/current
     rm -f versions/current
     local profile=`wvm_get_current_profile`
     local version=`wvm_get_current_version`
-    if [[ -n "${profile}" ]] && [[ -d "profiles/${version}/${profile}" ]]; then
-        ln -s ${version}/${profile} profiles/current
-        ln -s profiles/current current
+    if [[ -n "${profile}" ]] && [[ -d "profiles/${profile}" ]]; then
+        ln -s ${profile} profiles/current
     fi
     if [[ -n "${version}" ]] && [[ -d "versions/${version}" ]]; then
         ln -s ${version} versions/current
@@ -290,7 +287,7 @@ wvm_launch() {
 
     local path_bin="./versions/${version}"
     local path_cd="./versions/${version}"
-    local path_data="./profiles/${version}/${profile}"
+    local path_data="./profiles/${profile}"
     local arch=`uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc/ -e s/sparc64/sparc/ -e s/arm.*/arm/ -e s/sa110/arm/ -e s/alpha/axp/`
     local executable="`basename \"${1}\"`.${arch}"
     shift
@@ -334,7 +331,7 @@ wvm_profile() {
             echo "Can't create profile - no version is in use!"
             return 1
         fi
-        mkdir -p profiles/${version}/${profile}
+        mkdir -p profiles/${profile}
         wvm_set_current_profile ${profile}
         wvm_update_symlinks
         echo "Using profile '${profile}' on version '${version}'"
@@ -464,7 +461,7 @@ wvm_server() {
 
     if [[ ${#} -eq 2 ]]; then
         local profile=${2}
-        mkdir -p profiles/${version}/${profile}
+        mkdir -p profiles/${profile}
     else
         local profile=`wvm_get_current_profile`
         if [[ -z ${profile} ]]; then
