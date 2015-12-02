@@ -427,7 +427,21 @@ wvm_run() {
         shift
     fi
     local version=`wvm_get_current_version`
+    if [[ -z ${version} ]]; then
+        echo "No version is selected/installed."
+        echo "Try installing using:"
+        echo "    wvm install latest"
+        echo
+        return 1
+    fi
     local profile=`wvm_get_current_profile`
+    if [[ -z ${version} ]]; then
+        echo "No profile is selected."
+        echo "Create a profile using:"
+        echo "    wvm profile <name>"
+        echo
+        return 1
+    fi
     wvm_launch ${version} ${profile} warsow "${@}" || return
 }
 
@@ -537,14 +551,14 @@ wvm_help() {
     echo "    wvm current       Show current version of Warsow"
     echo "    wvm use           Set current version of Warsow"
     echo "    wvm run           Run a version of Warsow"
-    echo "    wvm profile       Show profiles or switch a profile"
+    echo "    wvm profile       Check or switch a profile"
     echo "    wvm server        Start/stop a Warsow server"
     # echo "    wvm tv            Start/stop a Warsow TV server"
     echo
     echo "Example:"
     echo "    wvm install latest"
     echo "    wvm profile foo"
-    echo "    ./warsow"
+    echo "    wvm run"
     echo
     echo "Server example:"
     echo "    wvm install latest"
